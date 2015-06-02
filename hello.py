@@ -1,22 +1,47 @@
-from flask import Flask, url_for, request, render_template
+from flask import Flask, request, render_template, redirect, url_for, flash, make_response
 app = Flask(__name__)
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    error = None
     if request.method == 'POST':
-        return "User %s logged in" % request.form['username']
+        if valid_login(
+            request.form.get('username'),
+            request.form.get('password')
+        ):
+            flash("Successfully logged in!!!")
+            response = make_response(redirect(url_for('welcome')))
+            response.set_cookie('username',request.form.get('username'))
+            return response
+        else:
+            error = "Incorrect username and password"
+    return render_template('login.html',error=error)
+
+@app.route('/logout')
+def logout():
+    response = make_response(redirect(url_for('login')))
+    response.set_cookie('username','',expires=0)
+    return response
+
+
+@app.route('/')
+def welcome():
+    username = request.cookies.get("username")
+    if username:
+        return render_template('welcome.html',username=username)
     else:
-        return render_template('login.html')
+        return redirect(url_for('login'))
+
+def valid_login(username, password):
+    #checks on the db is username and password is correct
+    if username == password:
+        return True
+    else:
+        return False
 
 
-#@app.route('/')
-#def show_url_for():
-#    return url_for('show_user_profile', username = 'oscar')
-
-#@app.route('/post/<int:post_id>')
-#def show_post(post_id):
-    #return 'Post: %d ' %post_id
 
 if __name__ == '__main__':
+    app.secret_key = 'SuperSecretKey'
     app.debug = True
     app.run()
